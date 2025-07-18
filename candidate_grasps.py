@@ -51,3 +51,13 @@ plt.colorbar()
 plt.show()
 
 depth_image = cv2.imread(depth_image_path, cv2.IMREAD_UNCHANGED)
+
+scaled_pos_output = cv2.resize(pos_output, (depth_image.shape[1], depth_image.shape[0]), interpolation=cv2.INTER_LINEAR)
+
+plt.figure(figsize=(6,4))
+plt.imshow(depth_image, cmap='grey')
+plt.imshow(scaled_pos_output, cmap='hot', alpha=0.45)
+plt.colorbar(label='Prediction')
+plt.title('Visualised Heatmap and Depth Image')
+plt.axis('off')
+plt.show()
