@@ -57,6 +57,10 @@ print(f'Cos output @ Grasp Centre {cos_output[y,x]}')
 print(f'Sin output @ Grasp Centre {sin_output[y,x]}')
 print(f'Gripper Width @ Grasp Centre {width_output[y,x]}')
 
+angle_radians = np.arctan2(sin_output[y,x], cos_output[y,x]) / 2.0
+angle_degrees = np.degrees(angle_radians)
+
+print(f'Computed angle output @ Grasp Centre {angle_radians} radians / {angle_degrees} degrees')
 
 plt.imshow(pos_output, cmap='hot')
 plt.title('Heatmap for proposed grasp centre point(s)')
@@ -74,10 +78,17 @@ scaled_x = int(x * scaled_width)
 scaled_y = int(y * scaled_height)
 print(f'Scaled Grasp Centre: (x={scaled_x}, y={scaled_y})')
 
+dx = np.cos(angle_radians) * 50
+dy = np.sin(angle_radians) * 50 
+
 plt.figure(figsize=(6,4))
 plt.imshow(depth_image, cmap='grey')
 plt.imshow(scaled_pos_output, cmap='hot', alpha=0.45)
 plt.colorbar(label='Prediction')
+
+plt.arrow(scaled_x, scaled_y, dx, dy, color='cyan')
+plt.plot(scaled_x, scaled_y, 'bo')
+
 plt.title('Visualised Heatmap and Depth Image')
 plt.axis('off')
 plt.show()
