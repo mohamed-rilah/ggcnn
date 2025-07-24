@@ -28,14 +28,14 @@ def get_candidate_grasp(depth_image, model):
 
 model_path = 'external-repos/ggcnn/ggcnn_weights_cornell/ggcnn_epoch_23_cornell_statedict.pt'
 
+model_start = time.time()
+
 model = GGCNN()
 state_dict = torch.load(model_path, map_location=torch.device('cpu'))
 model.load_state_dict(state_dict)
 model.eval()
 
 depth_image_path = 'Images/cube.png'
-
-start = time.time()
 
 grasp = get_candidate_grasp(depth_image_path, model)
 
@@ -47,12 +47,12 @@ width_output = grasp[3].squeeze().cpu().numpy()
 max_index = np.argmax(pos_output)
 y, x = np.unravel_index(max_index, pos_output.shape)
 
-end = time.time()
+model_end = time.time()
 
 angle_radians = np.arctan2(sin_output[y,x], cos_output[y,x]) / 2.0
 angle_degrees = np.degrees(angle_radians)
 
-print(f'Code Runtime: {end-start} seconds')
+print(f'Model Runtime: {model_end-model_start} seconds')
 
 print(f'Grasp Centre: (x={x}, y={y})')
 print(f'Cos output @ Grasp Centre {cos_output[y,x]}')
