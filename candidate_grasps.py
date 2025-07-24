@@ -7,15 +7,14 @@ import time
 
 from models.ggcnn import GGCNN
 
-def image_preprocessing(image_path = 'box_depthim.png'): 
+def image_preprocessing(image_path = 'cube.png'): 
     depth_image = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
 
     if depth_image.ndim == 3: 
         depth_image = depth_image[:, :, 0]
 
     normalised_depth = (depth_image - np.min(depth_image)) / (np.max(depth_image) - np.min(depth_image))
-    resized_depth = cv2.resize(normalised_depth, (300, 300))
-    tensor_depth = torch.tensor(resized_depth, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
+    tensor_depth = torch.tensor(normalised_depth, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
 
     return tensor_depth
 
@@ -34,7 +33,7 @@ state_dict = torch.load(model_path, map_location=torch.device('cpu'))
 model.load_state_dict(state_dict)
 model.eval()
 
-depth_image_path = 'Images/box_depthim.png'
+depth_image_path = 'Images/cube.png'
 
 start = time.time()
 
@@ -50,16 +49,15 @@ y, x = np.unravel_index(max_index, pos_output.shape)
 
 end = time.time()
 
+angle_radians = np.arctan2(sin_output[y,x], cos_output[y,x]) / 2.0
+angle_degrees = np.degrees(angle_radians)
+
 print(f'Code Runtime: {end-start} seconds')
 
 print(f'Grasp Centre: (x={x}, y={y})')
 print(f'Cos output @ Grasp Centre {cos_output[y,x]}')
 print(f'Sin output @ Grasp Centre {sin_output[y,x]}')
 print(f'Gripper Width @ Grasp Centre {width_output[y,x]}')
-
-angle_radians = np.arctan2(sin_output[y,x], cos_output[y,x]) / 2.0
-angle_degrees = np.degrees(angle_radians)
-
 print(f'Computed angle output @ Grasp Centre {angle_radians} radians / {angle_degrees} degrees')
 
 plt.imshow(pos_output, cmap='hot')
@@ -69,25 +67,21 @@ plt.show()
 
 depth_image = cv2.imread(depth_image_path, cv2.IMREAD_UNCHANGED)
 
-scaled_pos_output = cv2.resize(pos_output, (depth_image.shape[1], depth_image.shape[0]), interpolation=cv2.INTER_LINEAR)
+dx = np.cos(angle_radians) * 30
+dy = np.sin(angle_radians) * 30 
 
-scaled_height = scaled_pos_output.shape[0] / pos_output.shape[0] 
-scaled_width = scaled_pos_output.shape[1] / pos_output.shape[1]
-
-scaled_x = int(x * scaled_width) 
-scaled_y = int(y * scaled_height)
-print(f'Scaled Grasp Centre: (x={scaled_x}, y={scaled_y})')
-
-dx = np.cos(angle_radians) * 50
-dy = np.sin(angle_radians) * 50 
+orientation_x1 = x - dx
+orientation_y1 = y - dy
+orientation_x2 = x + dx
+orientation_y2 = y + dy
 
 plt.figure(figsize=(6,4))
 plt.imshow(depth_image, cmap='grey')
-plt.imshow(scaled_pos_output, cmap='hot', alpha=0.45)
+plt.imshow(pos_output, cmap='hot', alpha=0.45)
 plt.colorbar(label='Prediction')
 
-plt.arrow(scaled_x, scaled_y, dx, dy, color='cyan')
-plt.plot(scaled_x, scaled_y, 'bo')
+plt.plot([orientation_x1, orientation_x2], [orientation_y1, orientation_y2], color='cyan', linewidth=2)
+plt.plot(x, y, 'bo')
 
 plt.title('Visualised Heatmap and Depth Image')
 plt.axis('off')
