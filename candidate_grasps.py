@@ -5,9 +5,30 @@ import matplotlib.pyplot as plt
 
 import time
 
-from models.ggcnn import GGCNN
+import os
+import sys
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
+from external.ggcnn.models.ggcnn import GGCNN
+
+MODEL_PATH = 'external/ggcnn/ggcnn_weights_cornell/ggcnn_epoch_23_cornell_statedict.pt'
+
+def load_model(): 
+    """
+    This function runs the neccessary code to load and return the model, to be used in later functions
+    """
+    model = GGCNN()
+    state_dict = torch.load(MODEL_PATH, map_location=torch.device('cpu'))
+    model.load_state_dict(state_dict)
+    model.eval()
+
+    return model
 
 def image_preprocessing(image_path): 
+    """
+    Pre-proccesses the image in accordance to the GGCNN model input
+    :param image_path: path of the depth image
+    """
     depth_image = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
 
     if depth_image.ndim == 3: 
@@ -19,6 +40,11 @@ def image_preprocessing(image_path):
     return tensor_depth
 
 def get_candidate_grasp(depth_image, model): 
+    """
+    Obtains the output of the model, the grasp prediction from the GGCNN model
+    :param depth_image: path of the depth image
+    :param model: instance of the GGCNN model
+    """
     tensor_depth = image_preprocessing(depth_image)
 
     start_time = time.time()
@@ -34,7 +60,12 @@ def get_candidate_grasp(depth_image, model):
     return output
 
 def visualise_top_grasps(depth_image_path, model, n): 
-
+    """
+    Provides a visual overlay to view the predicted grasps, along with orientation
+    :param depth_image: path of the depth image
+    :param model: instance of the GGCNN model
+    :param n: number of predictions
+    """
     grasp = get_candidate_grasp(depth_image_path, model)
 
     pos_output = grasp[0].squeeze().cpu().numpy()
@@ -86,13 +117,30 @@ def visualise_top_grasps(depth_image_path, model, n):
     plt.tight_layout()
     plt.show()
 
-model_path = 'external/ggcnn/ggcnn_weights_cornell/ggcnn_epoch_23_cornell_statedict.pt'
+def grasp_predictor(depth_image_path):
+    """
+    This functions provides the simulated environment with the neccessary grasp details: x, y and gripper orientation
+    :param depth_image_path: path of the depth image
+    """
+    model = load_model()
 
-model = GGCNN()
-state_dict = torch.load(model_path, map_location=torch.device('cpu'))
-model.load_state_dict(state_dict)
-model.eval()
+    grasp = get_candidate_grasp(depth_image_path, model)
 
-depth_image_path = 'images/cube.png'
+    pos_output = grasp[0].squeeze().cpu().numpy()
+    cos_output = grasp[1].squeeze().cpu().numpy()
+    sin_output = grasp[2].squeeze().cpu().numpy()
 
-visualise_top_grasps(depth_image_path, model, n=5)
+    top_index = np.argmax(pos_output.flatten())
+    y, x = np.unravel_index(top_index, pos_output.shape)
+    angle_radians = np.arctan2(sin_output[y,x], cos_output[y,x]) / 2.0
+
+    print(f'\nFrom Grasp Predictor: \nTop Grasp: (x={x}, y={y}) \nGrasp Angle: {angle_radians} radians\n')
+
+    return x, y, angle_radians
+
+if __name__ == "__main__": 
+    model = load_model()
+
+    depth_image_path = 'images/cube.png'
+
+    visualise_top_grasps(depth_image_path, model, n=5)
