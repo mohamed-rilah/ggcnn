@@ -138,6 +138,30 @@ def grasp_predictor(depth_image_path):
 
     return x, y, angle_radians
 
+def batch_graps_predictor(depth_image_path):
+    """
+    This functions provides the simulated environment with the neccessary batch grasp details: x, y and gripper orientation
+    :param depth_image_path: path of the depth image
+    """   
+
+    model = load_model()
+    grasp = get_candidate_grasp(depth_image_path, model)
+
+    pos_output = grasp[0].squeeze().cpu().numpy()
+    cos_output = grasp[1].squeeze().cpu().numpy()
+    sin_output = grasp[2].squeeze().cpu().numpy()
+
+    top_n_indices = np.argsort(pos_output.flatten())[::-1][:5]
+    grasps = []
+
+    for idx in top_n_indices:
+        y, x = np.unravel_index(idx, pos_output.shape)
+
+        angle_radians = np.arctan2(sin_output[y,x], cos_output[y,x]) / 2.0
+        grasps.append((x, y, angle_radians))
+
+    return grasps
+
 if __name__ == "__main__": 
     model = load_model()
 
