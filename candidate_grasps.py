@@ -289,7 +289,7 @@ def visualise_nms_grasps(depth_image_path, model, reduced_grasps):
 if __name__ == "__main__": 
     model = load_model()
 
-    depth_image_path = 'images/cube.png'
+    depth_image_path = 'images/cube_small.png'
 
     print('Please select from the following options:')
     print('1 - Visualise Best 5 Grasps')
